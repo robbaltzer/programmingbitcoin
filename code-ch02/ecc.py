@@ -132,7 +132,7 @@ class Point:
             return
         # end::source2[]
         # tag::source1[]
-        if self.y**2 != self.x**3 + a * x + b:  # <1>
+        if self.y**2 != self.x**3 + a * x + b: # <1>
             raise ValueError('({}, {}) is not on the curve'.format(x, y))
 
     def __eq__(self, other):  # <2>
@@ -141,8 +141,7 @@ class Point:
     # end::source1[]
 
     def __ne__(self, other):
-        # this should be the inverse of the == operator
-        raise NotImplementedError
+        return not (self == other)
 
     def __repr__(self):
         if self.x is None:
@@ -160,25 +159,40 @@ class Point:
             return other
         if other.x is None:  # <4>
             return self
-        # end::source3[]
-
+        # end::source3[]          
+            
         # Case 1: self.x == other.x, self.y != other.y
         # Result is point at infinity
 
+        if self.x == other.x and self.y != other.y:
+            return self.__class__(None, None, self.a, self.b)
+            
         # Case 2: self.x ≠ other.x
         # Formula (x3,y3)==(x1,y1)+(x2,y2)
         # s=(y2-y1)/(x2-x1)
         # x3=s**2-x1-x2
         # y3=s*(x1-x3)-y1
 
+        if self.x != other.x:
+            s =(other.y - self.y)/(other.x - self.x)
+            x3 = s**2 - self.x  - other.x
+            y3 = s*(self.x - x3) - self.y
+            return self.__class__(x3, y3, self.a, self.b)
+            
         # Case 3: self == other
         # Formula (x3,y3)=(x1,y1)+(x1,y1)
         # s=(3*x1**2+a)/(2*y1)
         # x3=s**2-2*x1
         # y3=s*(x1-x3)-y1
 
-        raise NotImplementedError
-
+        if self.x == other.y and self.y == other.y:
+            x1 = self.x
+            y1 = self.y
+            a = self.a
+            s=(3*x1**2+a)/(2*y1)
+            x3=s**2-2*x1
+            y3=s*(x1-x3)-y1
+            return self.__class__(x3, y3, self.a, self.b)
 
 class PointTest(TestCase):
 
