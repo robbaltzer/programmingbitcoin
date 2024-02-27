@@ -108,20 +108,24 @@ class Tx:
         '''Takes a byte stream and parses the transaction at the start
         return a Tx object
         '''
-        bytes = s.read(4)
-        version = int.from_bytes(bytes, byteorder='little')
-        # cls.version = integer_value
-        # s.read(n) will return n bytes
-        # version is an integer in 4 bytes, little-endian
+        # bytes = s.read(4)
+        # version = int.from_bytes(bytes, byteorder='little')
+        version = little_endian_to_int(s.read(4))
         # num_inputs is a varint, use read_varint(s)
+        num_inputs = read_varint(s)
         # parse num_inputs number of TxIns
+        txIns = []
+        for _ in range(num_inputs):
+            txIns.append(TxIn.parse(s))
+
         # num_outputs is a varint, use read_varint(s)
         # parse num_outputs number of TxOuts
         # locktime is an integer in 4 bytes, little-endian
         # return an instance of the class (see __init__ for args)
         # raise NotImplementedError
-        return cls(version, None, None, None, testnet=testnet)
+        return cls(version, txIns, None, None, testnet=testnet)
 
+    
     # tag::source6[]
     def serialize(self):
         '''Returns the byte serialization of the transaction'''
@@ -169,11 +173,16 @@ class TxIn:
         return a TxIn object
         '''
         # prev_tx is 32 bytes, little endian
+        prev_tx = s.read(32)[::-1]
         # prev_index is an integer in 4 bytes, little endian
+        prev_index = little_endian_to_int(s.read(4))
         # use Script.parse to get the ScriptSig
+        script_sig = Script.parse(s)
         # sequence is an integer in 4 bytes, little-endian
+        sequence = little_endian_to_int(s.read(4))
         # return an instance of the class (see __init__ for args)
-        raise NotImplementedError
+        return cls(prev_tx, prev_index, script_sig, sequence)
+        # raise NotImplementedError
 
     # tag::source5[]
     def serialize(self):
