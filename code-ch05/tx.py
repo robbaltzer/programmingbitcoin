@@ -125,9 +125,9 @@ class Tx:
         for _ in range(num_outputs):
             txOuts.append(TxOut.parse(s))
         # locktime is an integer in 4 bytes, little-endian
+        locktime = little_endian_to_int(s.read(4))
         # return an instance of the class (see __init__ for args)
-        # raise NotImplementedError
-        return cls(version, txIns, txOuts, None, testnet=testnet)
+        return cls(version, txIns, txOuts, locktime, testnet=testnet)
 
     
     # tag::source6[]
@@ -145,12 +145,19 @@ class Tx:
     # end::source6[]
 
     def fee(self):
-        '''Returns the fee of this transaction in satoshi'''
+        # '''Returns the fee of this transaction in satoshi'''
         # initialize input sum and output sum
-        # use TxIn.value() to sum up the input amounts
+        input_sum = 0
+        output_sum = 0
+        # use TxIn.value() to sum up the input amounts'
+        for tx_in in self.tx_ins:
+            input_sum += tx_in.value()
         # use TxOut.amount to sum up the output amounts
+        for tx_out in self.tx_outs:
+            output_sum += tx_out.amount
         # fee is input sum - output sum
-        raise NotImplementedError
+        return input_sum - output_sum
+        # raise NotImplementedError
 
 
 # tag::source2[]
