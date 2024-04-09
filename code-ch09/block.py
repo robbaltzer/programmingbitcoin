@@ -24,6 +24,13 @@ class Block:
     @classmethod
     def parse(cls, s):
         '''Takes a byte stream and parses a block. Returns a Block object'''
+        version = little_endian_to_int(s.read(4))
+        prev_block = s.read(32)[::-1]
+        merkle_root = s.read(32)[::-1]
+        timestamp = little_endian_to_int(s.read(4))
+        bits = s.read(4)
+        nonce = s.read(4)
+        return cls(version, prev_block, merkle_root, timestamp, bits, nonce)
         # s.read(n) will read n bytes from the stream
         # version - 4 bytes, little endian, interpret as int
         # prev_block - 32 bytes, little endian (use [::-1] to reverse)
@@ -32,43 +39,56 @@ class Block:
         # bits - 4 bytes
         # nonce - 4 bytes
         # initialize class
-        raise NotImplementedError
+        # raise NotImplementedError
 
     def serialize(self):
         '''Returns the 80 byte block header'''
+        result = int_to_little_endian(self.version, 4)
+        result += self.prev_block[::-1]
+        result += self.merkle_root[::-1]
+        result += int_to_little_endian(self.timestamp, 4)
+        result += self.bits
+        result += self.nonce
+        return result
         # version - 4 bytes, little endian
         # prev_block - 32 bytes, little endian
         # merkle_root - 32 bytes, little endian
         # timestamp - 4 bytes, little endian
         # bits - 4 bytes
         # nonce - 4 bytes
-        raise NotImplementedError
+        # raise NotImplementedError
 
     def hash(self):
         '''Returns the hash256 interpreted little endian of the block'''
+        s = self.serialize()
+        sha = hash256(s)
+        return sha[::-1]
         # serialize
         # hash256
         # reverse
-        raise NotImplementedError
+        # raise NotImplementedError
 
     def bip9(self):
         '''Returns whether this block is signaling readiness for BIP9'''
         # BIP9 is signalled if the top 3 bits are 001
         # remember version is 32 bytes so right shift 29 (>> 29) and see if
         # that is 001
-        raise NotImplementedError
+        return self.version >> 29 == 0b001
+        # raise NotImplementedError
 
     def bip91(self):
         '''Returns whether this block is signaling readiness for BIP91'''
         # BIP91 is signalled if the 5th bit from the right is 1
         # shift 4 bits to the right and see if the last bit is 1
-        raise NotImplementedError
+        return self.version >> 4 & 0b1 == 1
+        # raise NotImplementedError
 
     def bip141(self):
         '''Returns whether this block is signaling readiness for BIP141'''
+        return self.version >> 1 & 0b1 == 1
         # BIP91 is signalled if the 2nd bit from the right is 1
         # shift 1 bit to the right and see if the last bit is 1
-        raise NotImplementedError
+        # raise NotImplementedError
 
     def target(self):
         '''Returns the proof-of-work target based on the bits'''
@@ -78,15 +98,17 @@ class Block:
         '''Returns the block difficulty based on the bits'''
         # note difficulty is (target of lowest difficulty) / (self's target)
         # lowest difficulty has bits that equal 0xffff001d
-        raise NotImplementedError
+        return 0xffff * 256**(0x1d-3)/self.target()
 
     def check_pow(self):
         '''Returns whether this block satisfies proof of work'''
         # get the hash256 of the serialization of this block
         # interpret this hash as a little-endian number
         # return whether this integer is less than the target
-        raise NotImplementedError
-
+        sha = hash256(self.serialize())
+        proof = little_endian_to_int(sha)
+        return proof < self.target()
+        # raise NotImplementedError
 
 class BlockTest(TestCase):
 
