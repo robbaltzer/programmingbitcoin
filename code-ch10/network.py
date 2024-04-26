@@ -159,21 +159,41 @@ class VersionMessage:
 
     def serialize(self):
         '''Serialize this message to send over the network'''
-        # version is 4 bytes little endian
+        # version is 4 bytes little endian'
+        serialized_message = int_to_little_endian(self.version, 4)
         # services is 8 bytes little endian
+        serialized_message += int_to_little_endian(self.services, 8)
         # timestamp is 8 bytes little endian
+        serialized_message += int_to_little_endian(self.timestamp, 8)
         # receiver services is 8 bytes little endian
+        serialized_message += int_to_little_endian(self.receiver_services, 8)
         # IPV4 is 10 00 bytes and 2 ff bytes then receiver ip
+        serialized_message += int_to_little_endian(0x00, 10)
+        serialized_message += int_to_little_endian(0xffff, 2)
+        serialized_message += self.receiver_ip
         # receiver port is 2 bytes, big endian
+        serialized_message += self.receiver_port.to_bytes(2, byteorder='big')
         # sender services is 8 bytes little endian
+        serialized_message += int_to_little_endian(self.receiver_services, 8)
         # IPV4 is 10 00 bytes and 2 ff bytes then sender ip
+        serialized_message += int_to_little_endian(0x00, 10)
+        serialized_message += int_to_little_endian(0xffff, 2)
+        serialized_message += self.sender_ip
         # sender port is 2 bytes, big endian
+        serialized_message += self.sender_port.to_bytes(2, byteorder='big')
         # nonce should be 8 bytes
+        serialized_message += self.nonce
         # useragent is a variable string, so varint first
+        serialized_message += encode_varint(len(self.user_agent))
+        serialized_message += self.user_agent
         # latest block is 4 bytes little endian
+        serialized_message += int_to_little_endian(self.latest_block, 4)
         # relay is 00 if false, 01 if true
-        raise NotImplementedError
-
+        if self.relay:
+            serialized_message += b'\x01'
+        else:
+            serialized_message += b'\x00'
+        return serialized_message
 
 class VersionMessageTest(TestCase):
 
