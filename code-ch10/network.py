@@ -93,12 +93,12 @@ class NetworkEnvelope:
         
         # add the payload itself
         serialized_message += self.payload
+        # print("Serialized Message (Hex):", serialized_message.hex())
         return serialized_message
 
     def stream(self):
         '''Returns a stream for parsing the payload'''
         return BytesIO(self.payload)
-
 
 class NetworkEnvelopeTest(TestCase):
 
@@ -136,6 +136,7 @@ class VersionMessage:
                  sender_ip=b'\x00\x00\x00\x00', sender_port=8333,
                  nonce=None, user_agent=b'/programmingbitcoin:0.1/',
                  latest_block=0, relay=False):
+        
         self.version = version
         self.services = services
         if timestamp is None:
@@ -155,7 +156,6 @@ class VersionMessage:
         self.user_agent = user_agent
         self.latest_block = latest_block
         self.relay = relay
-    # end::source2[]
 
     def serialize(self):
         '''Serialize this message to send over the network'''
@@ -266,12 +266,11 @@ class GetHeadersMessage:
 
     def serialize(self):
         '''Serialize this message to send over the network'''
-        # protocol version is 4 bytes little-endian
-        # number of hashes is a varint
-        # start block is in little-endian
-        # end block is also in little-endian
-        raise NotImplementedError
-
+        serialized_message = int_to_little_endian(self.version, 4)
+        serialized_message += encode_varint(self.num_hashes)
+        serialized_message += self.start_block[::-1]
+        serialized_message += self.end_block[::-1]
+        return serialized_message
 
 class GetHeadersMessageTest(TestCase):
 
@@ -315,26 +314,50 @@ class HeadersMessageTest(TestCase):
 # tag::source4[]
 class SimpleNode:
 
-    def __init__(self, host, port=None, testnet=False, logging=False):
+    def __init__(self, host, port=None, testnet=False, logging=True):
         if port is None:
             if testnet:
                 port = 18333
+                print('testnet')
             else:
                 port = 8333
+                print('mainnet')
         self.testnet = testnet
         self.logging = logging
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((host, port))
         self.stream = self.socket.makefile('rb', None)
+        self.host = host
     # end::source4[]
 
     def handshake(self):
         '''Do a handshake with the other node.
         Handshake is sending a version message and getting a verack back.'''
+        # # Create a version message
+        # version_message = VersionMessage()
+    
+        # # Send the version message
+        # self.send(version_message)
+    
+        # # Wait for the 'verack' message
+        # response = self.wait_for(VerAckMessage)
+    
+        # # If the response is a 'verack', the handshake is successful
+        # if isinstance(response, VerAckMessage):
+        #     print("Handshake successful.")
+        # else:
+        #     raise RuntimeError("Handshake failed. Expected VerAckMessage, got something else.")
+
+
+        version = VersionMessage()
+        self.send(version)
+        self.wait_for(VerAckMessage)
+
+        
         # create a version message
         # send the command
         # wait for a verack message
-        raise NotImplementedError
+        # raise NotImplementedError
     # tag::source4[]
 
     def send(self, message):  # <1>
@@ -366,9 +389,9 @@ class SimpleNode:
         return command_to_class[command].parse(envelope.stream())
 # end::source4[]
 
-
 class SimpleNodeTest(TestCase):
 
     def test_handshake(self):
-        node = SimpleNode('testnet.programmingbitcoin.com', testnet=True)
+        node = SimpleNode('138.201.78.28', testnet=True)
+        # node = SimpleNode('testnet.programmingbitcoin.com', testnet=True)
         node.handshake()
