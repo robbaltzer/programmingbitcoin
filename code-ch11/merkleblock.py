@@ -185,18 +185,32 @@ class MerkleBlock:
     def parse(cls, s):
         '''Takes a byte stream and parses a merkle block. Returns a Merkle Block object'''
         # version - 4 bytes, Little-Endian integer
+        version = little_endian_to_int(s.read(4))
         # prev_block - 32 bytes, Little-Endian (use [::-1])
+        prev_block = s.read(32)[::-1]
         # merkle_root - 32 bytes, Little-Endian (use [::-1])
+        merkle_root = s.read(32)[::-1]
         # timestamp - 4 bytes, Little-Endian integer
+        timestamp = little_endian_to_int(s.read(4))
         # bits - 4 bytes
+        bits = s.read(4)
         # nonce - 4 bytes
+        nonce = s.read(4)
         # total transactions in block - 4 bytes, Little-Endian integer
+        total = little_endian_to_int(s.read(4))
         # number of transaction hashes - varint
+        total_hashes = read_varint(s)
         # each transaction is 32 bytes, Little-Endian
+        hashes = []
+        for _ in range(total_hashes):
+            hashes.append(s.read(32)[::-1])
         # length of flags field - varint
+        length_of_flags = read_varint(s)
         # read the flags field
+        flags = s.read(length_of_flags)
         # initialize class
-        raise NotImplementedError
+        return cls(version, prev_block, merkle_root, timestamp, bits, nonce, total, hashes, flags)
+        # raise NotImplementedError
 
     def is_valid(self):
         '''Verifies whether the merkle tree information validates to the merkle root'''
@@ -205,7 +219,26 @@ class MerkleBlock:
         # initialize the merkle tree
         # populate the tree with flag bits and hashes
         # check if the computed root reversed is the same as the merkle root
-        raise NotImplementedError
+        # Step 1: Convert flags field to a bit field
+        flag_bits = bytes_to_bit_field(self.flags)
+        
+        # Step 2: Reverse self.hashes for the merkle root calculation
+        reversed_hashes = [h[::-1] for h in self.hashes]  # Reverse each hash to big-endian
+        
+        # Step 3: Initialize the merkle tree with the total number of hashes
+        tree = MerkleTree(self.total)
+        
+        # Step 4: Populate the tree with flag bits and hashes
+        try:
+            tree.populate_tree(flag_bits, reversed_hashes)
+        except Exception as e:
+            print(f"Error populating Merkle tree: {e}")
+            return False
+    
+        # Step 5: Check if the computed root reversed is the same as the merkle root
+        computed_root = tree.root()[::-1]  # Reverse the computed root to match the stored merkle_root format
+        return computed_root == self.merkle_root
+        # raise NotImplementedError
 
 
 class MerkleBlockTest(TestCase):
